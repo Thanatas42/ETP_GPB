@@ -4,28 +4,29 @@ using System.IO;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace ETPGPB
 {
-    public abstract class ClientBase
+	public static class ClientBase
     {
 		/// <summary>
 		/// Получить список контактов организации.
 		/// Список контактов включает в себя все контакты организации, в том числе те, с которыми обмен запрещен.
 		/// </summary>
-		/// <param name="changedAfterDate">Дата последнего изменения контактов.
-		/// Если указана, будут выбраны только те контакты, которые были измененны после заданной даты.
-		/// При сравнении дата будет преобразовываться в формат UTC.</param>
-		/// <param name="cancellationToken">Токен для отмены операции.</param>
-		/// <returns>Список контактов организации.</returns>
-		public static int GetContacts()
+		/// <param name="organizationId">ИД организации</param>
+		/// <param name="AuthenticationToken">Токен Сессии</param>
+		/// <param name="lastSync">Дата последней авторизации</param>
+		/// <returns>Список контрагентов организации.</returns>
+		public static Organization GetContacts(string organizationId, string AuthenticationToken, System.DateTime lastSync)
 		{
-			int asd = 123;
-
-			return asd;			
+			Organization adressBook = Organization.GetAddressBook(organizationId, AuthenticationToken, lastSync);
+			return adressBook;
+			
 		}
 
-		/// <summary>
+		/*/// <summary>
 		/// Создать экземпляр клиента.
 		/// </summary>
 		/// <param name="clientSystem">Система обмена.</param>
@@ -49,13 +50,7 @@ namespace ETPGPB
 				throw new ExchangeSystemConnectorResolveException($"Не найден коннектор для системы обмена {clientSystem}");
 			}
 			serviceClient.Initialize(settings, authTokenProvider, UpdateToken, connectorSetting);
-		}
-
-
-		/// <summary>
-		/// Коннектор, через который работаем
-		/// </summary>
-		protected IExchangeServiceConnector serviceClient;
+		}*/
 	}
 
 
@@ -112,121 +107,131 @@ namespace ETPGPB
 	public class Organization
 	{
 		/// <summary>
-		/// Наименование организации.
+		/// Количество организаций.
 		/// </summary>
-		public string Name { get; set; }
+		[JsonProperty("count")]
+		public int count { get; set; }
 
 		/// <summary>
-		/// Юридическое наименование организации.
+		/// Тело ответа.
 		/// </summary>
-		public string LegalName { get; set; }
+		[JsonProperty("data")]
+		public List<Counterparty> data { get; set; }
 
 		/// <summary>
-		/// Имя (для ФЛ).
+		/// Получение адресной книги
 		/// </summary>
-		public string FirstName { get; set; }
+		/// <param name="organizationId">ИД организации</param>
+		/// <param name="AuthenticationToken">Токен Сессии</param>
+		/// <param name="lastSync">Дата последней авторизации</param>
+		/// <returns>List контрагентов</returns>
+		public static Organization GetAddressBook(string organizationId, string AuthenticationToken, System.DateTime lastSync)
+		{
+			ServicePointManager.DefaultConnectionLimit = 20;
+			string orgId = organizationId.Remove(0, 3);
+
+			var httpWebRequest = (HttpWebRequest)WebRequest.Create(String.Format("https://apiedo.etpgpb.ru/Invitations/{0}/GetAddressBook/table", orgId));
+
+			httpWebRequest.ContentType = "application/json";
+			httpWebRequest.Method = "POST";
+			httpWebRequest.Headers.Add("SessionKey", AuthenticationToken);
+
+
+			using (var streamWriter = new StreamWriter(httpWebRequest.GetRequestStream()))
+			{
+				JObject jsonObject = new JObject();
+				jsonObject.Add("beginDate", "2018-01-01 00-00-01");
+				//lastSync.ToString("yyyy-MM-dd HH-mm-ss")
+				streamWriter.Write(jsonObject);
+			}
+
+			var httpResponse = (HttpWebResponse)httpWebRequest.GetResponse();
+
+			string response;
+			List<Organization> result = new List<Organization>();
+
+			using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
+			{
+				response = streamReader.ReadToEnd();
+			}
+						
+
+			Organization organizationList = JsonConvert.DeserializeObject<Organization>(response);
+
+			return organizationList;
+		}
+	}
+
+	/// <summary>
+	/// Организация-участник обмена электронными документами.
+	/// </summary>
+	public class Counterparty
+	{
+		/// <summary>
+		/// ИД организации.
+		/// </summary>
+		[JsonProperty("id")]
+		public string id { get; set; }
 
 		/// <summary>
-		/// Фамилия (для ФЛ).
+		/// Адрес абонентского ящика. 
 		/// </summary>
-		public string LastName { get; set; }
+		[JsonProperty("guid")]
+		public string guid { get; set; }
 
 		/// <summary>
-		/// Отчество (для ФЛ).
+		/// ИД отправителя. 
 		/// </summary>
-		public string MiddleName { get; set; }
+		[JsonProperty("sender")]
+		public string sender { get; set; }
+
+		/// <summary>
+		/// ИД получателя. 
+		/// </summary>
+		[JsonProperty("receiver")]
+		public string receiver { get; set; }
+
+		/// <summary>
+		/// Код оператора.
+		/// </summary>
+		[JsonProperty("sos")]
+		public string sos { get; set; }
 
 		/// <summary>
 		/// ИНН организации.
 		/// </summary>
+		[JsonProperty("Inn")]
 		public string Inn { get; set; }
 
 		/// <summary>
 		/// КПП организации.
 		/// </summary>
+		[JsonProperty("Kpp")]
 		public string Kpp { get; set; }
 
 		/// <summary>
-		/// ОГРН организации.
+		/// Наименование организации.
 		/// </summary>
-		public string Ogrn { get; set; }
+		[JsonProperty("Name")]
+		public string Name { get; set; }
 
 		/// <summary>
-		/// ИД организации.
+		/// Статус документооборота.
 		/// </summary>
-		public string OrganizationId { get; set; }
+		[JsonProperty("status")]
+		public string status { get; set; }
 
 		/// <summary>
-		/// ИД участника документооборота СФ, зарегистрированный в ФНС.
+		/// Статус документооборота.
 		/// </summary>
-		public string FnsParticipantId { get; set; }
-
-		/// <summary>
-		/// БИК.
-		/// </summary>
-		public string Bik { get; set; }
-
-		/// <summary>
-		/// Расчетный счет.
-		/// </summary>
-		public string CurrentAccount { get; set; }
-
-		/// <summary>
-		/// Телефон.
-		/// </summary>
-		public string PhoneNumber { get; set; }
-
-		/// <summary>
-		/// Факс.
-		/// </summary>
-		public string Fax { get; set; }
-
-		/// <summary>
-		/// Адрес абонентского ящика. 
-		/// </summary>
-		public string BoxId { get; set; }
-
-		/// <summary>
-		/// Юридический адрес.
-		/// </summary>
-		//public OrganizationAddress LegalAddress { get; set; }
-
-		/// <summary>
-		/// Почтовый адрес.
-		/// </summary>
-		//public OrganizationAddress MailAddress { get; set; }
-
-		/// <summary>
-		/// Адрес регистрации.
-		/// </summary>
-		//public OrganizationAddress RegistrationAddress { get; set; }
-
-		/// <summary>
-		/// Тип организации.
-		/// </summary>
-		//public OrganizationType OrganizationType { get; set; }
-
-		/// <summary>
-		/// Признак роуминга.
-		/// </summary>
-		public bool IsRoaming { get; set; }
-
-		/// <summary>
-		/// Название сервиса обмена.
-		/// </summary>
-		public string ExchangeServiceName { get; set; }
-
-		/// <summary>
-		/// Код оператора.
-		/// </summary>
-		public string OperatorCode { get; set; }
+		[JsonProperty("message")]
+		public string message { get; set; }
 	}
 
-	// NpoComputer.DCX.Common.ContactStatus
-	/// <summary>
-	/// Статус связи с контрагентом.
-	/// </summary>
-	public enum ContactStatus
+		/// <summary>
+		/// Статус связи с контрагентом.
+		/// </summary>
+		public enum ContactStatus
 	{
 		/// <summary>
 		/// Отправка запроса.
