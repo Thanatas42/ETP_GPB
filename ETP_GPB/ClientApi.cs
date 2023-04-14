@@ -5,26 +5,14 @@ using System.Collections.Concurrent;
 
 namespace ETPGPB
 {
-	public class Client : ClientBase
-	{
-		protected override IExchangeServiceConnector ResolveConnector(ExchangeSystem clientSystem)
-		{
-			return new ETP();
-		}
+	public static class Client
+	{	
+		public static List<ContactAdressBook> GetContacts(string organizationId, string AuthenticationToken, System.DateTime lastSync)
+        {
+			return ClientBase.GetContacts(organizationId, AuthenticationToken, lastSync);
+        }
 
-		private static ConcurrentDictionary<string, Client> cache = new ConcurrentDictionary<string, Client>();
-
-
-		/// <summary>
-		/// Создать экземпляр клиента.
-		/// </summary>
-		/// <param name="clientSystem">Система обмена.</param>
-		/// <param name="settings">Настройки системы обмена.</param>
-		/// <param name="tokenProvider">Провайдер токена аутентификации для сервиса обмена.</param>
-		/// <param name="connectorSetting">Расширенные настройки подключения к коннектору.</param>
-		public Client(ExchangeSystem clientSystem, ServiceSettings settings, IAuthTokenProvider tokenProvider = null, ConnectorSettings connectorSetting = null)
-			: base(clientSystem, settings, tokenProvider, connectorSetting)
-		{
-		}
 	}
+
+
 }

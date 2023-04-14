@@ -1,18 +1,18 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
-using System.Xml.Linq;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using ETPGPB.Common.Authentication;
 
-namespace ETPGPB
+namespace ETPGPB.Common
 {
-	public abstract class ClientBase
-	{
-
+    public abstract class ClientBase
+    {
         /// <summary>
         /// Коннектор, через который работаем
         /// </summary>
@@ -27,96 +27,98 @@ namespace ETPGPB
         /// <param name="lastSync">Дата последней авторизации</param>
         /// <returns>Список контрагентов организации.</returns>
         public static List<ContactAdressBook> GetContacts(string organizationId, string AuthenticationToken, System.DateTime lastSync)
-		{
-			return Participatin.GetContactList(organizationId, AuthenticationToken, lastSync);			
-		}
- 
+        {
+            return Participatin.GetContactList(organizationId, AuthenticationToken, lastSync);
+        }
+
+
 
         /// <summary>
         /// Событие истечения срока действия токена авторизации.
         /// </summary>
         public event EventHandler<TokenExpiredEventArgs> TokenExpired;
 
-		/// <summary>
-		/// Инициализация ETP.
-		/// </summary>
-		public static void Initialize(LogDelegate logCallback, LogExceptionDelegate logExCallback)
-		{
-			if (logCallback == null)
-			{
-				throw new ArgumentNullException("logCallback");
-			}
-			if (logExCallback == null)
-			{
-				throw new ArgumentNullException("logExCallback");
-			}
-			Log.Initialize(logCallback, logExCallback);
-			Log.Trace("Модуль ETP инициализирован");
-		}
-				
-
-		/// <summary>
-		/// Инициализировать прокси по-умолчанию.
-		/// </summary>
-		private static void InitializeDefaultProxy()
-		{
-			WebRequest.DefaultWebProxy = WebRequest.GetSystemWebProxy();
-			WebRequest.DefaultWebProxy.Credentials = CredentialCache.DefaultCredentials;
-		}
-
-	
-
-		/// <summary>
-		/// Класс по умолчанию для доступа к токену.
-		/// </summary>
-		private class DefaultAuthTokenProvider : IAuthTokenProvider
-		{
-			public string AuthenticationToken { get; set; }
-		}
-
-		/// <summary>
-		/// Найти и создать коннектор к системе обмена.
-		/// </summary>
-		/// <param name="clientSystem">Система обмена.</param>
-		protected abstract IExchangeServiceConnector ResolveConnector(ExchangeSystem clientSystem);
+        /// <summary>
+        /// Инициализация ETP.
+        /// </summary>
+        public static void Initialize(LogDelegate logCallback, LogExceptionDelegate logExCallback)
+        {
+            if (logCallback == null)
+            {
+                throw new ArgumentNullException("logCallback");
+            }
+            if (logExCallback == null)
+            {
+                throw new ArgumentNullException("logExCallback");
+            }
+            Log.Initialize(logCallback, logExCallback);
+            Log.Trace("Модуль ETP инициализирован");
+        }
 
 
-		/// <summary>
-		/// Обновить токен авторизации.
-		/// </summary>
-		/// <returns>Признак того, что токен был обновлен.</returns>
-		protected bool UpdateToken()
-		{
-			TokenExpiredEventArgs args = new TokenExpiredEventArgs();
-			this.TokenExpired?.Invoke(this, args);
-			return args.TokenUpdated;
-		}
-	}
-
-	public class ConnectorSettings
-	{
-		public bool ExtendedLogging { get; set; }
-
-		/// <summary>
-		/// Конструктор.
-		/// </summary>
-		public ConnectorSettings()
-		{
-		}
-
-		/// <summary>
-		/// Конструктор.
-		/// </summary>
-		/// <param name="extendedLogging"></param>
-		public ConnectorSettings(bool extendedLogging)
-		{
-			ExtendedLogging = extendedLogging;
-		}
-	}
+        /// <summary>
+        /// Инициализировать прокси по-умолчанию.
+        /// </summary>
+        private static void InitializeDefaultProxy()
+        {
+            WebRequest.DefaultWebProxy = WebRequest.GetSystemWebProxy();
+            WebRequest.DefaultWebProxy.Credentials = CredentialCache.DefaultCredentials;
+        }
 
 
-	public class Contact : IContact
-	{
+
+        /// <summary>
+        /// Класс по умолчанию для доступа к токену.
+        /// </summary>
+        private class DefaultAuthTokenProvider : IAuthTokenProvider
+        {
+            public string AuthenticationToken { get; set; }
+        }
+
+        /// <summary>
+        /// Найти и создать коннектор к системе обмена.
+        /// </summary>
+        /// <param name="clientSystem">Система обмена.</param>
+        protected abstract IExchangeServiceConnector ResolveConnector(ExchangeSystem clientSystem);
+
+
+        /// <summary>
+        /// Обновить токен авторизации.
+        /// </summary>
+        /// <returns>Признак того, что токен был обновлен.</returns>
+        protected bool UpdateToken()
+        {
+            TokenExpiredEventArgs args = new TokenExpiredEventArgs();
+            this.TokenExpired?.Invoke(this, args);
+            return args.TokenUpdated;
+        }
+    }
+
+
+    public class ConnectorSettings
+    {
+        public bool ExtendedLogging { get; set; }
+
+        /// <summary>
+        /// Конструктор.
+        /// </summary>
+        public ConnectorSettings()
+        {
+        }
+
+        /// <summary>
+        /// Конструктор.
+        /// </summary>
+        /// <param name="extendedLogging"></param>
+        public ConnectorSettings(bool extendedLogging)
+        {
+            ExtendedLogging = extendedLogging;
+        }
+    }
+
+
+    public class Contact : IContact
+    {
         public Organization Organization { get; set; }
 
         public ContactStatus Status { get; set; }
@@ -126,32 +128,32 @@ namespace ETPGPB
         public string Comment { get; set; }
     }
 
-	/// <summary>
-	/// Контакт с контрагентом.
-	/// </summary>
-	public interface IContact
-	{
-		/// <summary>
-		/// Организация контрагента.
-		/// </summary>
-		Organization Organization { get; }
+    /// <summary>
+    /// Контакт с контрагентом.
+    /// </summary>
+    public interface IContact
+    {
+        /// <summary>
+        /// Организация контрагента.
+        /// </summary>
+        Organization Organization { get; }
 
-		/// <summary>
-		/// Состояние обмена с контрагентом.
-		/// </summary>
-		ContactStatus Status { get; }
+        /// <summary>
+        /// Состояние обмена с контрагентом.
+        /// </summary>
+        ContactStatus Status { get; }
 
-		/// <summary>
-		/// Дата изменения статуса в формате UTC.
-		/// </summary>
-		DateTime? StatusChangeDate { get; }
+        /// <summary>
+        /// Дата изменения статуса в формате UTC.
+        /// </summary>
+        DateTime? StatusChangeDate { get; }
 
-		/// <summary>
-		/// Комментарий контрагента.
-		/// </summary>
-		string Comment { get; }
+        /// <summary>
+        /// Комментарий контрагента.
+        /// </summary>
+        string Comment { get; }
 
-	}
+    }
 
     /// <summary>
     /// Коннектор к сервису обмена.
@@ -162,7 +164,7 @@ namespace ETPGPB
         /// Имя сервиса.
         /// </summary>
         string ServiceName { get; }
-      
+
         /// <summary>
         /// Поддерживаемые операции работы с контактами.
         /// </summary>
@@ -310,7 +312,7 @@ namespace ETPGPB
         /// <param name="documentId">ИД документа в системе обмена.</param>
         /// <returns>Массив байт, содержащий ПДФ версию печатной формы документа.</returns>
         byte[] GetDocumentPrintedForm(string boxId, string messageId, string documentId);
-        
+
         #region Устаревшие свойства
         /*
         /// <summary>
@@ -668,47 +670,47 @@ namespace ETPGPB
     /// Абонент в системе обмена
     /// </summary>
     public interface ISubscriber
-	{
-		/// <summary>
-		/// Информация об организации.
-		/// </summary>
-		//Organization Organization { get; }
+    {
+        /// <summary>
+        /// Информация об организации.
+        /// </summary>
+        //Organization Organization { get; }
 
-		/// <summary>
-		/// ИД ящика организации на сервисе обмена.
-		/// </summary>
-		string BoxId { get; }
+        /// <summary>
+        /// ИД ящика организации на сервисе обмена.
+        /// </summary>
+        string BoxId { get; }
 
-		/// <summary>
-		/// Коллекция подразделений абонента.
-		/// </summary>
-		//IList<Department> Departments { get; }
+        /// <summary>
+        /// Коллекция подразделений абонента.
+        /// </summary>
+        //IList<Department> Departments { get; }
 
-		/// <summary>
-		/// Адрес головного подразделения
-		/// </summary>
-		//Department HeadDepartment { get; }
+        /// <summary>
+        /// Адрес головного подразделения
+        /// </summary>
+        //Department HeadDepartment { get; }
 
-		/// <summary>
-		/// Признак, что абонент подписал регламент ФНС для обмена счетами-фактурами.
-		/// </summary>
-		bool InvoiceReglamentAccepted { get; }
+        /// <summary>
+        /// Признак, что абонент подписал регламент ФНС для обмена счетами-фактурами.
+        /// </summary>
+        bool InvoiceReglamentAccepted { get; }
 
-		/// <summary>
-		/// ИД контрагента.
-		/// </summary>
-		string CounteragentId { get; set; }
+        /// <summary>
+        /// ИД контрагента.
+        /// </summary>
+        string CounteragentId { get; set; }
 
-		/// <summary>
-		/// ИД участника документооборота СФ, зарегистрированный в ФНС.
-		/// </summary>
-		string FnsParticipantId { get; set; }
+        /// <summary>
+        /// ИД участника документооборота СФ, зарегистрированный в ФНС.
+        /// </summary>
+        string FnsParticipantId { get; set; }
 
-		/// <summary>
-		/// ИД абонента в виде GUID.
-		/// </summary>
-		Guid SubscriberId { get; set; }
-	}
+        /// <summary>
+        /// ИД абонента в виде GUID.
+        /// </summary>
+        Guid SubscriberId { get; set; }
+    }
 
     /// <summary>
     /// Организация-участник обмена электронными документами.
@@ -830,75 +832,74 @@ namespace ETPGPB
     /// Организация-участник обмена электронными документами.
     /// </summary>
     public class Participatin
-	{
-		/// <summary>
-		/// Количество организаций.
-		/// </summary>
-		[JsonProperty("count")]
-		public int count { get; set; }
+    {
+        /// <summary>
+        /// Количество организаций.
+        /// </summary>
+        [JsonProperty("count")]
+        public int count { get; set; }
 
-		/// <summary>
-		/// Тело ответа.
-		/// </summary>
-		[JsonProperty("data")]
-		public List<ContactAdressBook> data { get; set; }
-
-
-
-		/// <summary>
-		/// Получение адресной книги
-		/// </summary>
-		/// <param name="organizationId">ИД организации</param>
-		/// <param name="AuthenticationToken">Токен Сессии</param>
-		/// <param name="lastSync">Дата последней авторизации</param>
-		/// <returns>List контрагентов</returns>
-		public static List<ContactAdressBook> GetContactList(string organizationId, string AuthenticationToken, System.DateTime lastSync)
-		{
-			ServicePointManager.DefaultConnectionLimit = 20;
-			string orgId = organizationId.Remove(0, 3);
-
-			var httpWebRequest = (HttpWebRequest)WebRequest.Create(String.Format("https://apiedo.etpgpb.ru/Invitations/{0}/GetAddressBook/table", orgId));
-
-			httpWebRequest.ContentType = "application/json";
-			httpWebRequest.Method = "POST";
-			httpWebRequest.Headers.Add("SessionKey", AuthenticationToken);
+        /// <summary>
+        /// Тело ответа.
+        /// </summary>
+        [JsonProperty("data")]
+        public List<ContactAdressBook> data { get; set; }
 
 
-			using (var streamWriter = new StreamWriter(httpWebRequest.GetRequestStream()))
-			{
-				JObject jsonObject = new JObject();
-				jsonObject.Add("beginDate", "2018-01-01 00-00-01");
-				//lastSync.ToString("yyyy-MM-dd HH-mm-ss")
-				streamWriter.Write(jsonObject);
-			}
 
-			var httpResponse = (HttpWebResponse)httpWebRequest.GetResponse();
+        /// <summary>
+        /// Получение адресной книги
+        /// </summary>
+        /// <param name="organizationId">ИД организации</param>
+        /// <param name="AuthenticationToken">Токен Сессии</param>
+        /// <param name="lastSync">Дата последней авторизации</param>
+        /// <returns>List контрагентов</returns>
+        public static List<ContactAdressBook> GetContactList(string organizationId, string AuthenticationToken, System.DateTime lastSync)
+        {
+            ServicePointManager.DefaultConnectionLimit = 20;
+            string orgId = organizationId.Remove(0, 3);
 
-			string response;
+            var httpWebRequest = (HttpWebRequest)WebRequest.Create(String.Format("https://apiedo.etpgpb.ru/Invitations/{0}/GetAddressBook/table", orgId));
 
-			using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
-			{
-				response = streamReader.ReadToEnd();
-			}
+            httpWebRequest.ContentType = "application/json";
+            httpWebRequest.Method = "POST";
+            httpWebRequest.Headers.Add("SessionKey", AuthenticationToken);
 
 
-			Participatin Parti = JsonConvert.DeserializeObject<Participatin>(response);
-			List<ContactAdressBook> result = Parti.data;
+            using (var streamWriter = new StreamWriter(httpWebRequest.GetRequestStream()))
+            {
+                JObject jsonObject = new JObject();
+                jsonObject.Add("beginDate", "2018-01-01 00-00-01");
+                //lastSync.ToString("yyyy-MM-dd HH-mm-ss")
+                streamWriter.Write(jsonObject);
+            }
 
-			return result;
-		}
-	}
+            var httpResponse = (HttpWebResponse)httpWebRequest.GetResponse();
 
+            string response;
+
+            using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
+            {
+                response = streamReader.ReadToEnd();
+            }
+
+
+            Participatin Parti = JsonConvert.DeserializeObject<Participatin>(response);
+            List<ContactAdressBook> result = Parti.data;
+
+            return result;
+        }
+    }
 
     /// <summary>
     /// Организация-участник обмена электронными документами.
     /// </summary>
-    public class ContactAdressBook
+    public class Counterparty
     {
         /// <summary>
-		/// ИД организации.
-		/// </summary>
-		[JsonProperty("id")]
+        /// ИД организации.
+        /// </summary>
+        [JsonProperty("id")]
         public string id { get; set; }
 
         /// <summary>
@@ -935,13 +936,24 @@ namespace ETPGPB
         /// КПП организации.
         /// </summary>
         [JsonProperty("Kpp")]
-        public string Kpp { get; set; }
+        public string? Kpp { get; set; }
 
         /// <summary>
         /// Наименование организации.
         /// </summary>
         [JsonProperty("Name")]
         public string Name { get; set; }
+    }
+
+    /// <summary>
+    /// Организация-участник обмена электронными документами.
+    /// </summary>
+    public class ContactAdressBook
+    {
+        /// <summary>
+        /// Организация контрагента.
+        /// </summary>        
+        public Counterparty Organization { get; set; }
 
         /// <summary>
         /// Состояние обмена с контрагентом.
@@ -964,169 +976,169 @@ namespace ETPGPB
     /// Статус связи с контрагентом.
     /// </summary>
     public enum ContactStatus
-	{
-		/// <summary>
-		/// Отправка запроса.
-		/// </summary>
-		Sent,
-		/// <summary>
-		/// Подтверждение контрагентом.
-		/// </summary>
-		Accept,
-		/// <summary>
-		/// Отправка отказа.
-		/// </summary>
-		Reject
-}
+    {
+        /// <summary>
+        /// Отправка запроса.
+        /// </summary>
+        Sent,
+        /// <summary>
+        /// Подтверждение контрагентом.
+        /// </summary>
+        Accept,
+        /// <summary>
+        /// Отправка отказа.
+        /// </summary>
+        Reject
+    }
 
-	public static class Log
-	{
-		private static LogDelegate logDelegate;
+    public static class Log
+    {
+        private static LogDelegate logDelegate;
 
-		private static LogExceptionDelegate logExceptionDelegate;
+        private static LogExceptionDelegate logExceptionDelegate;
 
-		public static void Initialize(LogDelegate logDelegate, LogExceptionDelegate logExceptionDelegate)
-		{
-			Log.logDelegate = logDelegate;
-			Log.logExceptionDelegate = logExceptionDelegate;
-		}
+        public static void Initialize(LogDelegate logDelegate, LogExceptionDelegate logExceptionDelegate)
+        {
+            Log.logDelegate = logDelegate;
+            Log.logExceptionDelegate = logExceptionDelegate;
+        }
 
-		public static void Trace(string msg, params object[] args)
-		{
-			logDelegate(LogLevel.Trace, msg, args);
-		}
+        public static void Trace(string msg, params object[] args)
+        {
+            logDelegate(LogLevel.Trace, msg, args);
+        }
 
-		public static void Debug(string msg, params object[] args)
-		{
-			logDelegate(LogLevel.Debug, msg, args);
-		}
+        public static void Debug(string msg, params object[] args)
+        {
+            logDelegate(LogLevel.Debug, msg, args);
+        }
 
-		public static void Info(string msg, params object[] args)
-		{
-			logDelegate(LogLevel.Info, msg, args);
-		}
+        public static void Info(string msg, params object[] args)
+        {
+            logDelegate(LogLevel.Info, msg, args);
+        }
 
-		public static void Warn(string msg, params object[] args)
-		{
-			logDelegate(LogLevel.Warn, msg, args);
-		}
+        public static void Warn(string msg, params object[] args)
+        {
+            logDelegate(LogLevel.Warn, msg, args);
+        }
 
-		public static void Error(string msg, params object[] args)
-		{
-			logDelegate(LogLevel.Error, msg, args);
-		}
+        public static void Error(string msg, params object[] args)
+        {
+            logDelegate(LogLevel.Error, msg, args);
+        }
 
-		public static void Fatal(string msg, params object[] args)
-		{
-			logDelegate(LogLevel.Fatal, msg, args);
-		}
+        public static void Fatal(string msg, params object[] args)
+        {
+            logDelegate(LogLevel.Fatal, msg, args);
+        }
 
-		public static void Exception(Exception ex)
-		{
-			logExceptionDelegate("", ex);
-		}
-	}
-	public delegate void LogDelegate(LogLevel level, string msg, params object[] args);
+        public static void Exception(Exception ex)
+        {
+            logExceptionDelegate("", ex);
+        }
+    }
+    public delegate void LogDelegate(LogLevel level, string msg, params object[] args);
 
-	public delegate void LogExceptionDelegate(string msg, Exception ex, params object[] args);
-	public enum LogLevel
-	{
-		Trace,
-		Debug,
-		Info,
-		Warn,
-		Error,
-		Fatal
-	}
+    public delegate void LogExceptionDelegate(string msg, Exception ex, params object[] args);
+    public enum LogLevel
+    {
+        Trace,
+        Debug,
+        Info,
+        Warn,
+        Error,
+        Fatal
+    }
 
-	/// <summary>
-	/// Настройки прокси.
-	/// </summary>
-	public class ProxySettings
-	{
-		/// <summary>
-		/// Сервер.
-		/// </summary>
-		public Uri Server { get; private set; }
+    /// <summary>
+    /// Настройки прокси.
+    /// </summary>
+    public class ProxySettings
+    {
+        /// <summary>
+        /// Сервер.
+        /// </summary>
+        public Uri Server { get; private set; }
 
-		/// <summary>
-		/// Пользователь прокси.
-		/// </summary>
-		public string User { get; private set; }
+        /// <summary>
+        /// Пользователь прокси.
+        /// </summary>
+        public string User { get; private set; }
 
-		/// <summary>
-		/// Пароль.
-		/// </summary>
-		public string Password { get; private set; }
+        /// <summary>
+        /// Пароль.
+        /// </summary>
+        public string Password { get; private set; }
 
-		/// <summary>
-		/// Конструктор.
-		/// </summary>
-		public ProxySettings()
-		{
-		}
+        /// <summary>
+        /// Конструктор.
+        /// </summary>
+        public ProxySettings()
+        {
+        }
 
-		/// <summary>
-		/// Конструктор.
-		/// </summary>
-		/// <param name="server">Сервер.</param>
-		/// <param name="user">Имя пользователя.</param>
-		/// <param name="password">Пароль пользователя.</param>
-		public ProxySettings(Uri server, string user, string password)
-		{
-			Server = server;
-			User = user;
-			Password = password;
-		}
-	}
+        /// <summary>
+        /// Конструктор.
+        /// </summary>
+        /// <param name="server">Сервер.</param>
+        /// <param name="user">Имя пользователя.</param>
+        /// <param name="password">Пароль пользователя.</param>
+        public ProxySettings(Uri server, string user, string password)
+        {
+            Server = server;
+            User = user;
+            Password = password;
+        }
+    }
 
-	/// <summary>
-	/// Настройки сервиса: URL, прокси, временные папки.
-	/// </summary>
-	public class ServiceSettings
-	{
-		/// <summary>
-		/// Url-адрес сервиса.
-		/// </summary>
-		public string ServiceUrl { get; set; }
+    /// <summary>
+    /// Настройки сервиса: URL, прокси, временные папки.
+    /// </summary>
+    public class ServiceSettings
+    {
+        /// <summary>
+        /// Url-адрес сервиса.
+        /// </summary>
+        public string ServiceUrl { get; set; }
 
-		/// <summary>
-		/// Url-адрес сервиса для построения ссылок на документы.
-		/// </summary>
-		public string HyperlinkUrl { get; set; }
+        /// <summary>
+        /// Url-адрес сервиса для построения ссылок на документы.
+        /// </summary>
+        public string HyperlinkUrl { get; set; }
 
-		/// <summary>
-		/// Прокси.
-		/// </summary>
-		public ProxySettings Proxy { get; set; }
+        /// <summary>
+        /// Прокси.
+        /// </summary>
+        public ProxySettings Proxy { get; set; }
 
-		/// <summary>
-		/// ИНН организации на сервисе.
-		/// </summary>
-		public string OurOrganizationInn { get; set; }
+        /// <summary>
+        /// ИНН организации на сервисе.
+        /// </summary>
+        public string OurOrganizationInn { get; set; }
 
-		/// <summary>
-		/// КПП организации на сервисе.
-		/// </summary>
-		public string OurOrganizationKpp { get; set; }
+        /// <summary>
+        /// КПП организации на сервисе.
+        /// </summary>
+        public string OurOrganizationKpp { get; set; }
 
-		/// <summary>
-		/// ИД ящика организации на сервисе.
-		/// </summary>
-		public string OurOrganizationBoxId { get; set; }
+        /// <summary>
+        /// ИД ящика организации на сервисе.
+        /// </summary>
+        public string OurOrganizationBoxId { get; set; }
 
-		/// <summary>
-		/// Код оператора.
-		/// </summary>
-		public string OperatorCode { get; set; }
-	}
+        /// <summary>
+        /// Код оператора.
+        /// </summary>
+        public string OperatorCode { get; set; }
+    }
 
 
-	/// <summary>
-	/// Система обмена.
-	/// </summary>
-	public enum ExchangeSystem
-	{
-		ETPGPB
-	}
+    /// <summary>
+    /// Система обмена.
+    /// </summary>
+    public enum ExchangeSystem
+    {
+        ETPGPB
+    }
 }
