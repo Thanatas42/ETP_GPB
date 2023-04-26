@@ -112,50 +112,61 @@ namespace ETPGPB
 
 		public static string GetJsonListElement(string property, int index)
 		{
-			int colonIndex = property.IndexOf(":");
-			if (property[colonIndex + 1] != '[')
+		    string propBody = string.Empty;
+
+		    if (property.Trim()[0] == '[')
+			propBody = property.TrimStart('[').TrimEnd(']');
+		    else if (property[property.IndexOf(":") + 1] == '[')
+			propBody = property.Substring(property.IndexOf(":") + 1).TrimStart('[').TrimEnd(']');
+		    else
+			throw new Exception("Не является свойством-коллекцией");
+
+		    int startIndex = 0;
+		    string result = string.Empty;
+		    for (int i = 0; i <= index; i++)
+		    {
+			propBody = propBody.Substring(startIndex).TrimStart();
+			if (string.IsNullOrEmpty(propBody))
+			    throw new IndexOutOfRangeException();
+			else
 			{
-				return "Не является свойством-коллекцией";
-			}
-			string propBody = property.Substring(colonIndex + 2);
-			int startIndex = 0;
-			string result = string.Empty;
-			for (int i = 0; i <= index; i++)
-			{
-				propBody = propBody.Substring(startIndex).TrimStart();
-				if (string.IsNullOrEmpty(propBody))
-				{
-					return string.Empty;
-				}
-				result = ((propBody[0] == '{') ? CutPropWithBreakets(propBody, '{', '}') : ((propBody[0] != '[') ? GetSinglePropertyValue(propBody) : CutPropWithBreakets(propBody, '[', ']')));
-				if (i == index)
-				{
-					return result.Trim(',');
-				}
+			    if (propBody[0] == '{')
+				result = CutPropWithBreakets(propBody, '{', '}');
+			    else if (propBody[0] == '[')
+				result = CutPropWithBreakets(propBody, '[', ']');
+			    else
+				result = GetSinglePropertyValue(propBody);
+
+			    if (i == index)
+				result = result.Trim(',');
+			    else
+			    {
 				startIndex = result.Length + 1;
 				result = string.Empty;
+			    }
 			}
-			return string.Empty;
+		    }
+		    return result;
 		}
 
 		public static int GetJsonListCount(string property)
 		{
-			int count = 0;
-			while (true)
+		    int count = 0;
+		    string element = GetJsonListElement(property, count);
+
+		    while (element != String.Empty)
+		    {
+			try
 			{
-				try
-				{
-					if (GetJsonListElement(property, count) == string.Empty)
-					{
-						return count;
-					}
-					count++;
-				}
-				catch
-				{
-					return count;
-				}
+			    count++;
+			    element = GetJsonListElement(property, count);
 			}
+			catch
+			{
+			    break;
+			}
+		    }
+		    return count;
 		}
 
 		public static string GetSinglePropertyValue(string value)
