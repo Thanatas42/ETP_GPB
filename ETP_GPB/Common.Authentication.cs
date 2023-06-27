@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace ETPGPB
+namespace ETPlibrary.ETPGPB.Common.Authentication
 {
     /// <summary>
     /// Провайдер для доступа к текущему токену авторизации для сервиса обмена.

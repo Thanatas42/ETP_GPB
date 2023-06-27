@@ -4,14 +4,27 @@ using System.IO;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
-using System.Xml.Linq;
+using ETPlibrary.ETPGPB.Common.Authentication;
+using ETPlibrary.ETPGPB.Common.Exceptions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace ETPGPB
+namespace ETPlibrary.ETPGPB.Common
 {
-	public abstract class ClientBase
-	{
+    public abstract class ClientBase
+    {
+        /// <summary>
+        /// Класс по умолчанию для доступа к токену.
+        /// </summary>
+        private class DefaultAuthTokenProvider : IAuthTokenProvider
+        {
+            public string AuthenticationToken { get; set; }
+        }
+
+        /// <summary>
+        /// Объект для доступа к токену авторизации на сервисе обмена.
+        /// </summary>
+        protected readonly IAuthTokenProvider authTokenProvider;
 
         /// <summary>
         /// Коннектор, через который работаем
@@ -64,16 +77,6 @@ namespace ETPGPB
 			WebRequest.DefaultWebProxy.Credentials = CredentialCache.DefaultCredentials;
 		}
 
-	
-
-		/// <summary>
-		/// Класс по умолчанию для доступа к токену.
-		/// </summary>
-		private class DefaultAuthTokenProvider : IAuthTokenProvider
-		{
-			public string AuthenticationToken { get; set; }
-		}
-
 		/// <summary>
 		/// Найти и создать коннектор к системе обмена.
 		/// </summary>
@@ -91,7 +94,33 @@ namespace ETPGPB
 			this.TokenExpired?.Invoke(this, args);
 			return args.TokenUpdated;
 		}
-	}
+
+        /// <summary>
+        /// Создать экземпляр клиента.
+        /// </summary>
+        /// <param name="clientSystem">Система обмена.</param>
+        /// <param name="settings">Настройки системы обмена.</param>
+        /// <param name="tokenProvider">Провайдер токена аутентификации для сервиса обмена.</param>
+        /// <param name="connectorSetting">Расширенные настройки подключения к коннектору.</param>
+        protected ClientBase(ExchangeSystem clientSystem, ServiceSettings settings, IAuthTokenProvider tokenProvider, ConnectorSettings connectorSetting = null)
+        {
+            if (settings == null)
+            {
+                throw new ArgumentNullException("settings");
+            }
+            if (settings.Proxy?.Server == null)
+            {
+                InitializeDefaultProxy();
+            }
+            authTokenProvider = tokenProvider ?? new DefaultAuthTokenProvider();
+            serviceClient = ResolveConnector(clientSystem);
+            if (serviceClient == null)
+            {
+                throw new ExchangeSystemConnectorResolveException($"Не найден коннектор для системы обмена {clientSystem}");
+            }
+            serviceClient.Initialize(settings, authTokenProvider, UpdateToken, connectorSetting);
+        }
+    }
 
 	public class ConnectorSettings
 	{
@@ -881,6 +910,8 @@ namespace ETPGPB
 				response = streamReader.ReadToEnd();
 			}
 
+            
+
 
 			Participatin Parti = JsonConvert.DeserializeObject<Participatin>(response);
 			List<ContactAdressBook> result = Parti.data;
@@ -1129,4 +1160,6 @@ namespace ETPGPB
 	{
 		ETPGPB
 	}
+
+
 }
