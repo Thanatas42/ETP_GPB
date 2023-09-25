@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace ETPGPB
+namespace ETPlibrary.ETPGPB.JSONLibrary.JsonParser
 {
 	// JSONLibrary.JsonParser
 	public static class JsonParser

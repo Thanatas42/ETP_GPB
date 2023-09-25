@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
+using System.Xml.Linq;
 using ETPlibrary.ETPGPB.Common.Authentication;
 using ETPlibrary.ETPGPB.Common.Exceptions;
 using Newtonsoft.Json;
@@ -43,7 +44,19 @@ namespace ETPlibrary.ETPGPB.Common
 		{
 			return Participatin.GetContactList(organizationId, AuthenticationToken, lastSync);			
 		}
- 
+
+        /// <summary>
+        /// Получить документообороты с непрочитанными входящими пакетами.
+        /// </summary>
+        /// <param name="AuthenticationToken">Токен Сессии</param>
+        /// <returns>Список документооборотов.</returns>
+        public static List<Message> GetUnreadDocuments(string AuthenticationToken)
+        {
+            return Message.GetUnreadDocuments(AuthenticationToken);
+        }
+
+        
+
 
         /// <summary>
         /// Событие истечения срока действия токена авторизации.
@@ -740,6 +753,32 @@ namespace ETPlibrary.ETPGPB.Common
 	}
 
     /// <summary>
+    /// Интерфейс сообщения.
+    /// </summary>
+    public interface IMessage
+    {
+        /// <summary>
+        /// Идентификатор документооборота.
+        /// </summary>
+        string WorkflowId { get; set; }
+
+        /// <summary>
+        /// Идентификатор отправителя документооборота.
+        /// </summary>
+        string WorkflowSenderId { get; set; }
+
+        /// <summary>
+        /// Идентификатор получателя документооборота.
+        /// </summary>
+        string WorkflowRecipientId { get; set; }
+
+        /// <summary>
+        /// Отправитель сообщения.
+        /// </summary>
+        string[] AbonentsWithUnreadPackages { get; set; }
+    }
+
+    /// <summary>
     /// Организация-участник обмена электронными документами.
     /// </summary>
     public class Organization
@@ -896,7 +935,7 @@ namespace ETPlibrary.ETPGPB.Common
 			using (var streamWriter = new StreamWriter(httpWebRequest.GetRequestStream()))
 			{
 				JObject jsonObject = new JObject();
-				jsonObject.Add("beginDate", "2018-01-01 00-00-01");
+				jsonObject.Add("beginDate", lastSync.ToString("yyyy-MM-dd HH-mm-ss"));
 				//lastSync.ToString("yyyy-MM-dd HH-mm-ss")
 				streamWriter.Write(jsonObject);
 			}
@@ -920,6 +959,51 @@ namespace ETPlibrary.ETPGPB.Common
 		}
 	}
 
+
+    /// <summary>
+    /// Сообщение.
+    /// </summary>
+    public class Message : IMessage
+    {
+        [JsonProperty("workflowId")]
+        public string WorkflowId { get; set; }
+        [JsonProperty("workflowSenderId")]
+        public string WorkflowSenderId { get; set; }
+        [JsonProperty("workflowRecipientId")]
+        public string WorkflowRecipientId { get; set; }
+        [JsonProperty("abonentsWithUnreadPackages")]
+        public string[] AbonentsWithUnreadPackages { get; set; }
+
+        /// <summary>
+        /// Получить документообороты с непрочитанными входящими пакетами.
+        /// </summary>
+        /// <param name="AuthenticationToken">Токен Сессии</param>
+        /// <returns>Список документооборотов.</returns>
+		public static List<Message> GetUnreadDocuments(string AuthenticationToken)
+        {
+            ServicePointManager.DefaultConnectionLimit = 20;
+
+            var httpWebRequest = (HttpWebRequest)WebRequest.Create("https://apiedo.etpgpb.ru/Docflows/Unread");
+
+            httpWebRequest.ContentType = "application/json";
+            httpWebRequest.Method = "GET";
+            httpWebRequest.Headers.Add("SessionKey", AuthenticationToken);
+
+
+            var httpResponse = (HttpWebResponse)httpWebRequest.GetResponse();
+
+            string response;
+
+            using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
+            {
+                response = streamReader.ReadToEnd();
+            }
+
+            List<Message> result = JsonConvert.DeserializeObject<List<Message>>(response);
+
+            return result;
+        }
+    }
 
     /// <summary>
     /// Организация-участник обмена электронными документами.
